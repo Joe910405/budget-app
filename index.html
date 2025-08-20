@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>簡易記帳工具</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: inline-block;
+      width: 80px;
+    }
+    input, select {
+      padding: 5px;
+      width: calc(100% - 100px);
+    }
+    button {
+      padding: 8px 16px;
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    tfoot td {
+      font-weight: bold;
+    }
+    .income {
+      color: green;
+    }
+    .expense {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="pageTitle">簡單記帳工具</h1>
+
+  <!-- 🟡 中間輸入區塊（待會要隱藏） -->
+<div id="inputArea">
+  <div class="form-group">
+    <label for="type">類型：</label>
+    <select id="type">
+      <option value="income">收入</option>
+      <option value="expense">支出</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="item">項目：</label>
+    <input type="text" id="item" placeholder="例如：薪水 / 早餐">
+  </div>
+
+  <div class="form-group">
+    <label for="amount">金額：</label>
+    <input type="number" id="amount" placeholder="例如：1000" min="0">
+  </div>
+
+<div style="display: flex; gap: 10px;">
+  <button onclick="addRecord()">新增</button>
+  <button onclick="uploadToServer()" style="margin-left: auto;">上傳</button>
+</div>
+
+<!-- 🟢 表格顯示區 -->
+<h2>記帳紀錄</h2>
+<table border="1" id="recordTable">
+  <thead>
+      <tr>
+        <th>類型</th>
+        <th>項目</th>
+        <th>金額</th>
+      </tr>
+    </thead>
+    <tbody id="recordList">
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">總收入</td>
+        <td id="totalIncome" class="income">0</td>
+      </tr>
+      <tr>
+        <td colspan="2">總支出</td>
+        <td id="totalExpense" class="expense">0</td>
+      </tr>
+      <tr>
+        <td colspan="2">餘額</td>
+        <td id="balance">0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <script>
+    let incomeTotal = 0;
+    let expenseTotal = 0;
+    const records = [];
+
+    function addRecord() {
+      const type = document.getElementById('type').value;
+      const item = document.getElementById('item').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+
+      if (!item || isNaN(amount) || amount <= 0) {
+        alert("請輸入有效的項目名稱和金額！");
+        return;
+      }
+
+      const record = { type, item, amount };
+      records.push(record);
+
+      const recordList = document.getElementById('recordList');
+      const newRow = document.createElement('tr');
+      newRow.innerHTML = `
+        <td class="${type}">${type === 'income' ? '收入' : '支出'}</td>
+        <td>${item}</td>
+        <td class="${type}">${amount}</td>
+      `;
+      recordList.appendChild(newRow);
+
+      if (type === 'income') {
+        incomeTotal += amount;
+      } else {
+        expenseTotal += amount;
+      }
+
+      updateSummary();
+
+      document.getElementById('item').value = '';
+      document.getElementById('amount').value = '';
+    }
+
+    function updateSummary() {
+      document.getElementById('totalIncome').textContent = incomeTotal.toFixed(2);
+      document.getElementById('totalExpense').textContent = expenseTotal.toFixed(2);
+      document.getElementById('balance').textContent = (incomeTotal - expenseTotal).toFixed(2);
+    }
+
+    function exportCSV() {
+      if (records.length === 0) {
+        alert("目前沒有資料可以匯出！");
+        return;
+      }
+
+      let csv = '類型,項目,金額\n';
+
+      records.forEach(record => {
+        const typeName = record.type === 'income' ? '收入' : '支出';
+        csv += `${typeName},${record.item},${record.amount}\n`;
+      });
+
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "記帳紀錄.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+function uploadToServer() {
+  if (records.length === 0) {
+    alert("沒有資料可上傳！");
+    return;
+  }
+
+  fetch('/upload', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ records })
+})
+
+  .then(res => res.json())
+  .then(data => {
+    alert("✅ 上傳成功：" + data.message);
+  })
+  .catch(err => {
+    console.error(err);
+    alert("❌ 上傳失敗！");
+  });
+}
+
+  </script>
+</body>
+</html>
