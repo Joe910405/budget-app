@@ -182,7 +182,7 @@ function uploadToServer() {
     return;
   }
 
-  fetch('/upload', {
+  fetch('https://budget-app-ep7k.onrender.com/upload', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ records })
